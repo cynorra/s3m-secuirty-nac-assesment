@@ -1,0 +1,61 @@
+# ══════════════════════════════════════════════════════════════
+# FreeRADIUS Default Virtual Server
+# ══════════════════════════════════════════════════════════════
+#
+# Tüm auth/authz/acct işlemleri rlm_rest üzerinden FastAPI'ye gider.
+#
+# rlm_rest HTTP durum kodlarını şöyle yorumlar:
+#   2xx → ok    → Access-Accept
+#   4xx → reject → Access-Reject
+#   5xx → fail
+
+server default {
+
+    listen {
+        type = auth
+        ipaddr = *
+        port = 1812
+    }
+
+    listen {
+        type = acct
+        ipaddr = *
+        port = 1813
+    }
+
+    # ── Authorize ─────────────────────────────────────────────
+    # REST'ten VLAN/policy attribute'lerini al,
+    # Auth-Type'ı rest olarak ayarla.
+    authorize {
+        filter_username
+        rest
+        update control {
+            &Auth-Type := rest
+        }
+    }
+
+    # ── Authenticate ──────────────────────────────────────────
+    # rest modülü /auth'a istek atar.
+    # 200 → accept, 401 → reject.
+    authenticate {
+        Auth-Type rest {
+            rest
+        }
+    }
+
+    # ── Post-Auth ─────────────────────────────────────────────
+    post-auth {
+        Post-Auth-Type REJECT {
+            noop
+        }
+    }
+
+    # ── Accounting ────────────────────────────────────────────
+    preacct {
+        acct_unique
+    }
+
+    accounting {
+        rest
+    }
+}

@@ -1,0 +1,39 @@
+rest {
+    connect_uri = "http://nac-api:8000"
+
+    # ── Authenticate: POST /auth ──────────────────────────────
+    # body='post' → form-encoded gönderir (JSON bozulma sorunu yok)
+    # 200 → ok (accept), 401 → reject
+    authenticate {
+        uri = "${..connect_uri}/auth"
+        method = 'post'
+        body = 'post'
+        tls = {}
+    }
+
+    # ── Authorize: POST /authorize ────────────────────────────
+    authorize {
+        uri = "${..connect_uri}/authorize"
+        method = 'post'
+        body = 'post'
+        tls = {}
+    }
+
+    # ── Accounting: POST /accounting ──────────────────────────
+    accounting {
+        uri = "${..connect_uri}/accounting"
+        method = 'post'
+        body = 'post'
+        tls = {}
+    }
+
+    pool {
+        start = 5
+        min = 3
+        max = 10
+        spare = 3
+        uses = 0
+        lifetime = 0
+        idle_timeout = 60
+    }
+}

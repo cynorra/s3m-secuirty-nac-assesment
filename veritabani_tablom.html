@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>NAC — Veritabanı Verileri (Canlı)</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f7f7f8; color: #333; padding: 40px 20px; }
+.container { max-width: 1000px; margin: 0 auto; }
+h1 { font-size: 22px; font-weight: 500; color: #1a1a2e; text-align: center; margin-bottom: 6px; }
+.subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 12px; }
+.toolbar { display: flex; justify-content: center; gap: 12px; margin-bottom: 30px; }
+.btn { background: #fff; border: 1px solid #ddd; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #333; }
+.btn:hover { background: #f0f0f0; }
+.btn-primary { background: #378add; color: #fff; border-color: #378add; }
+.btn-primary:hover { background: #2d72b8; }
+.last-update { text-align: center; font-size: 11px; color: #aaa; margin-bottom: 24px; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.summary-card { background: #fff; border-radius: 12px; border: 1px solid #e4e4e7; padding: 16px; text-align: center; }
+.summary-card .num { font-size: 28px; font-weight: 600; }
+.summary-card .label { font-size: 12px; color: #888; margin-top: 4px; }
+
+.card { background: #fff; border-radius: 14px; border: 1px solid #e4e4e7; padding: 24px; margin-bottom: 24px; }
+.card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.card-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; font-weight: 600; }
+.card-title { font-size: 16px; font-weight: 600; color: #1a1a2e; }
+.card-desc { font-size: 12px; color: #888; margin-top: 2px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #f9f9fb; padding: 10px 14px; text-align: left; font-weight: 500; color: #666; border-bottom: 2px solid #eee; }
+td { padding: 10px 14px; border-bottom: 1px solid #f0f0f2; color: #333; }
+tr:hover td { background: #f9f9fb; }
+.mono { font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; color: #555; }
+.empty { text-align: center; color: #bbb; padding: 20px; font-style: italic; }
+
+.badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.b-admin { background: #e6f1fb; color: #185fa5; }
+.b-employee { background: #e1f5ee; color: #0f6e56; }
+.b-guest { background: #faeeda; color: #854f0b; }
+.b-iot { background: #eeedfe; color: #534ab7; }
+.b-unknown { background: #f0f0f2; color: #666; }
+
+.vlan { display: inline-block; padding: 3px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.v10 { background: #e6f1fb; color: #0c447c; }
+.v20 { background: #e1f5ee; color: #085041; }
+.v30 { background: #faeeda; color: #633806; }
+.v40 { background: #eeedfe; color: #3c3489; }
+.v-default { background: #f0f0f2; color: #555; }
+
+.online { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.dot-on { width: 8px; height: 8px; border-radius: 50%; background: #1d9e75; }
+.dot-off { width: 8px; height: 8px; border-radius: 50%; background: #ddd; }
+
+.relation { display: flex; align-items: center; justify-content: center; padding: 8px 0; gap: 6px; }
+.relation-label { font-size: 12px; color: #999; padding: 4px 12px; background: #f9f9fb; border-radius: 6px; border: 1px dashed #ddd; }
+
+.note { background: #f0f7fe; border-left: 3px solid #378add; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 12px; color: #444; line-height: 1.6; margin-top: 12px; }
+.loading { text-align: center; padding: 40px; color: #999; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Veritabani Verileri — Canli Sorgu</h1>
+    <p class="subtitle">API'den gercek zamanli cekiliyor — her 15 saniyede otomatik yenileniyor</p>
+
+    <div class="toolbar">
+        <button class="btn btn-primary" onclick="loadAll()">Yenile</button>
+        <button class="btn" onclick="toggleAutoRefresh()">Otomatik: <span id="auto-status">ACIK</span></button>
+    </div>
+    <div class="last-update" id="last-update">Yukleniyor...</div>
+
+    <div class="summary-grid" id="summary">
+        <div class="summary-card"><div class="num" style="color:#378add">-</div><div class="label">Kullanici</div></div>
+        <div class="summary-card"><div class="num" style="color:#1d9e75">-</div><div class="label">Grup</div></div>
+        <div class="summary-card"><div class="num" style="color:#534ab7">-</div><div class="label">MAC Cihaz</div></div>
+        <div class="summary-card"><div class="num" style="color:#ba7517">-</div><div class="label">Aktif Oturum</div></div>
+    </div>
+
+    <!-- Kullanicilar -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon" style="background:#378add">1</div>
+            <div>
+                <div class="card-title">Kullanicilar ve Gruplari</div>
+                <div class="card-desc">radcheck + radusergroup tablolarindan — /users endpoint'i</div>
+            </div>
+        </div>
+        <table><thead><tr><th>username</th><th>grup</th><th>VLAN</th><th>durum</th></tr></thead>
+        <tbody id="users-table"><tr><td colspan="4" class="loading">Yukleniyor...</td></tr></tbody></table>
+    </div>
+
+    <div class="relation"><span class="relation-label">gruplar radgroupreply tablosunda VLAN'a eslesir</span></div>
+
+    <!-- Grup politikalari -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon" style="background:#534ab7">2</div>
+            <div>
+                <div class="card-title">Grup VLAN Politikalari</div>
+                <div class="card-desc">radgroupreply tablosundan — /authorize endpoint'i bu veriyi donuyor</div>
+            </div>
+        </div>
+        <table><thead><tr><th>grup</th><th>VLAN</th><th>filter</th><th>ek ayar</th></tr></thead>
+        <tbody id="groups-table"><tr><td colspan="4" class="loading">Yukleniyor...</td></tr></tbody></table>
+    </div>
+
+    <!-- MAC cihazlar -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon" style="background:#d85a30">3</div>
+            <div>
+                <div class="card-title">Kayitli MAC Cihazlari (MAB)</div>
+                <div class="card-desc">mac_devices tablosundan — /devices endpoint'i</div>
+            </div>
+        </div>
+        <table><thead><tr><th>MAC adresi</th><th>cihaz adi</th><th>tip</th><th>grup</th><th>VLAN</th></tr></thead>
+        <tbody id="devices-table"><tr><td colspan="5" class="loading">Yukleniyor...</td></tr></tbody></table>
+        <div class="note">Tabloda olmayan MAC adresleri otomatik olarak <strong>guest</strong> grubuna duser → VLAN 30</div>
+    </div>
+
+    <!-- Aktif oturumlar -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon" style="background:#1d9e75">4</div>
+            <div>
+                <div class="card-title">Aktif Oturumlar</div>
+                <div class="card-desc">Redis cache'ten — /sessions/active endpoint'i</div>
+            </div>
+        </div>
+        <table><thead><tr><th>kullanici</th><th>oturum ID</th><th>NAS IP</th><th>IP adresi</th><th>sure (sn)</th><th>giris/cikis veri</th></tr></thead>
+        <tbody id="sessions-table"><tr><td colspan="6" class="empty">Aktif oturum yok</td></tr></tbody></table>
+    </div>
+
+    <!-- Accounting gecmisi -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon" style="background:#888">5</div>
+            <div>
+                <div class="card-title">Accounting Gecmisi</div>
+                <div class="card-desc">radacct tablosundan — /accounting/history endpoint'i</div>
+            </div>
+        </div>
+        <table><thead><tr><th>kullanici</th><th>oturum ID</th><th>NAS IP</th><th>baslangic</th><th>bitis</th><th>sure (sn)</th></tr></thead>
+        <tbody id="acct-table"><tr><td colspan="6" class="empty">Henuz kayit yok</td></tr></tbody></table>
+    </div>
+
+    <!-- Test referansi -->
+    <div class="card" style="background: #f9f9fb; border-style: dashed;">
+        <div class="card-header">
+            <div class="card-icon" style="background:#1a1a2e">?</div>
+            <div>
+                <div class="card-title">Test sonuclari nereden geliyor?</div>
+                <div class="card-desc">Her test komutu yukaridaki tablolardaki verileri kullaniyor</div>
+            </div>
+        </div>
+        <table>
+            <tr><th style="width:45%">test komutu</th><th>hangi tabloya bakiyor</th><th>beklenen sonuc</th></tr>
+            <tr><td class="mono" style="font-size:11px">radtest admin1 "Admin.Pass.2026!"</td><td>radcheck → radusergroup → radgroupreply</td><td><span class="vlan v10">Accept + VLAN 10</span></td></tr>
+            <tr><td class="mono" style="font-size:11px">radtest employee1 "Emp.Pass.2026!"</td><td>radcheck → radusergroup → radgroupreply</td><td><span class="vlan v20">Accept + VLAN 20</span></td></tr>
+            <tr><td class="mono" style="font-size:11px">radtest admin1 "yanlis"</td><td>radcheck (sifre eslesmedi)</td><td style="color:#a32d2d; font-weight:500">Reject</td></tr>
+            <tr><td class="mono" style="font-size:11px">radclient AA:BB:CC:DD:EE:01</td><td>mac_devices → radgroupreply</td><td><span class="vlan v40">Accept + VLAN 40</span></td></tr>
+            <tr><td class="mono" style="font-size:11px">radclient FF:FF:FF:FF:FF:FF</td><td>mac_devices (yok) → guest</td><td><span class="vlan v30">Accept + VLAN 30</span></td></tr>
+        </table>
+    </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let autoRefresh = true;
+let refreshTimer = null;
+
+const groupColors = { admin: 'b-admin', employee: 'b-employee', guest: 'b-guest', iot: 'b-iot' };
+const vlanColors = { '10': 'v10', '20': 'v20', '30': 'v30', '40': 'v40' };
+
+function groupBadge(g) { return '<span class="badge ' + (groupColors[g] || 'b-unknown') + '">' + g + '</span>'; }
+function vlanBadge(v) { return v ? '<span class="vlan ' + (vlanColors[v] || 'v-default') + '">VLAN ' + v + '</span>' : '-'; }
+function formatBytes(b) { if (!b || b == 0) return '0 B'; if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
+function formatTime(t) { if (!t) return '-'; return new Date(t).toLocaleString('tr-TR'); }
+
+async function fetchJSON(url) {
+    try { const r = await fetch(API + url); return await r.json(); }
+    catch(e) { console.error(url, e); return null; }
+}
+
+async function loadUsers() {
+    const data = await fetchJSON('/users');
+    if (!data) return;
+    const tb = document.getElementById('users-table');
+    if (data.users.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="empty">Kullanici yok</td></tr>'; return; }
+    tb.innerHTML = data.users.map(u =>
+        '<tr><td><strong>' + u.username + '</strong></td>' +
+        '<td>' + groupBadge(u.group) + '</td>' +
+        '<td>' + vlanBadge(u.vlan) + '</td>' +
+        '<td><span class="online"><span class="' + (u.is_online ? 'dot-on' : 'dot-off') + '"></span>' + (u.is_online ? 'online' : 'offline') + '</span></td></tr>'
+    ).join('');
+    return data.users.length;
+}
+
+async function loadGroups() {
+    const data = await fetchJSON('/dashboard/data');
+    if (!data) return;
+    const groups = data.group_distribution;
+    const tb = document.getElementById('groups-table');
+
+    const groupVlans = { admin: {vlan:'10', filter:'admin-acl', extra:'-'}, employee: {vlan:'20', filter:'employee-acl', extra:'-'}, guest: {vlan:'30', filter:'guest-acl', extra:'Session-Timeout: 3600'}, iot: {vlan:'40', filter:'iot-acl', extra:'-'} };
+
+    tb.innerHTML = groups.map(g => {
+        const info = groupVlans[g.groupname] || {vlan:'-', filter:'-', extra:'-'};
+        return '<tr><td>' + groupBadge(g.groupname) + ' <span style="color:#999; font-size:11px">(' + g.count + ' kullanici)</span></td>' +
+        '<td>' + vlanBadge(info.vlan) + '</td>' +
+        '<td class="mono">' + info.filter + '</td>' +
+        '<td style="font-size:12px; color:#888">' + info.extra + '</td></tr>';
+    }).join('');
+    return groups.length;
+}
+
+async function loadDevices() {
+    const data = await fetchJSON('/devices');
+    if (!data) return;
+    const tb = document.getElementById('devices-table');
+    if (data.devices.length === 0) { tb.innerHTML = '<tr><td colspan="5" class="empty">Cihaz yok</td></tr>'; return; }
+
+    const groupVlan = { admin:'10', employee:'20', guest:'30', iot:'40' };
+    tb.innerHTML = data.devices.map(d =>
+        '<tr><td class="mono">' + d.mac_address + '</td>' +
+        '<td>' + (d.device_name || '-') + '</td>' +
+        '<td><span style="background:#f0f0f2; padding:2px 10px; border-radius:6px; font-size:11px">' + (d.device_type || '-') + '</span></td>' +
+        '<td>' + groupBadge(d.groupname) + '</td>' +
+        '<td>' + vlanBadge(groupVlan[d.groupname] || '-') + '</td></tr>'
+    ).join('');
+    return data.devices.length;
+}
+
+async function loadSessions() {
+    const data = await fetchJSON('/sessions/active');
+    if (!data) return;
+    const tb = document.getElementById('sessions-table');
+    if (data.sessions.length === 0) { tb.innerHTML = '<tr><td colspan="6" class="empty">Aktif oturum yok</td></tr>'; return; }
+    tb.innerHTML = data.sessions.map(s =>
+        '<tr><td><strong>' + s.username + '</strong></td>' +
+        '<td class="mono" style="font-size:11px">' + s.session_id + '</td>' +
+        '<td class="mono">' + (s.nas_ip || '-') + '</td>' +
+        '<td class="mono">' + (s.framed_ip || '-') + '</td>' +
+        '<td>' + (s.session_time || 0) + '</td>' +
+        '<td style="font-size:11px">' + formatBytes(s.input_octets) + ' / ' + formatBytes(s.output_octets) + '</td></tr>'
+    ).join('');
+    return data.sessions.length;
+}
+
+async function loadAccounting() {
+    const data = await fetchJSON('/accounting/history');
+    if (!data) return;
+    const tb = document.getElementById('acct-table');
+    if (data.records.length === 0) { tb.innerHTML = '<tr><td colspan="6" class="empty">Henuz kayit yok</td></tr>'; return; }
+    tb.innerHTML = data.records.map(a =>
+        '<tr><td><strong>' + a.username + '</strong></td>' +
+        '<td class="mono" style="font-size:11px">' + (a.acctsessionid || '-') + '</td>' +
+        '<td class="mono">' + (a.nasipaddress || '-') + '</td>' +
+        '<td style="font-size:12px">' + formatTime(a.acctstarttime) + '</td>' +
+        '<td style="font-size:12px">' + (a.acctstoptime ? formatTime(a.acctstoptime) : '<span style="color:#1d9e75; font-weight:500">aktif</span>') + '</td>' +
+        '<td>' + (a.acctsessiontime || 0) + '</td></tr>'
+    ).join('');
+}
+
+async function loadAll() {
+    const [userCount, groupCount, deviceCount] = await Promise.all([
+        loadUsers(), loadGroups(), loadDevices()
+    ]);
+    const sessData = await fetchJSON('/sessions/active');
+    await loadSessions();
+    await loadAccounting();
+
+    const sc = sessData ? sessData.total : 0;
+    document.getElementById('summary').innerHTML =
+        summaryCard(userCount || 0, 'Kullanici', '#378add') +
+        summaryCard(groupCount || 0, 'Grup', '#1d9e75') +
+        summaryCard(deviceCount || 0, 'MAC Cihaz', '#534ab7') +
+        summaryCard(sc, 'Aktif Oturum', '#ba7517');
+
+    document.getElementById('last-update').textContent = 'Son guncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+}
+
+function summaryCard(num, label, color) {
+    return '<div class="summary-card"><div class="num" style="color:' + color + '">' + num + '</div><div class="label">' + label + '</div></div>';
+}
+
+function toggleAutoRefresh() {
+    autoRefresh = !autoRefresh;
+    document.getElementById('auto-status').textContent = autoRefresh ? 'ACIK' : 'KAPALI';
+    if (autoRefresh) { refreshTimer = setInterval(loadAll, 15000); }
+    else { clearInterval(refreshTimer); }
+}
+
+loadAll();
+refreshTimer = setInterval(loadAll, 15000);
+</script>
+</body>
+</html>

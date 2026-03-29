@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>NAC Sistemi — Mimari Diyagram</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; display: flex; justify-content: center; padding: 40px 20px; }
+.container { max-width: 900px; width: 100%; }
+h1 { text-align: center; font-size: 24px; font-weight: 500; color: #1a1a2e; margin-bottom: 40px; }
+
+.box {
+    border-radius: 12px;
+    padding: 18px 24px;
+    text-align: center;
+    position: relative;
+}
+.box .title { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+.box .sub { font-size: 12px; opacity: 0.8; }
+.box .ports { font-size: 11px; opacity: 0.6; margin-top: 4px; }
+
+.nas { background: #f1efe8; border: 1px solid #d3d1c7; color: #2c2c2a; }
+.radius { background: #e6f1fb; border: 1px solid #85b7eb; color: #042c53; }
+.api { background: #e1f5ee; border: 1px solid #5dcaa5; color: #04342c; }
+.db { background: #eeedfe; border: 1px solid #afa9ec; color: #26215c; }
+.cache { background: #faece7; border: 1px solid #f0997b; color: #4a1b0c; }
+.network-bar { background: #f8f8f8; border: 1px dashed #ccc; border-radius: 8px; padding: 10px; text-align: center; font-size: 13px; color: #888; margin-top: 30px; }
+
+.arrow-container { display: flex; justify-content: center; align-items: center; padding: 8px 0; }
+.arrow { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.arrow-line { width: 2px; height: 24px; background: #999; }
+.arrow-head { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #999; }
+.arrow-label { font-size: 11px; color: #666; background: #fff; padding: 2px 8px; border-radius: 4px; }
+
+.row { display: flex; gap: 20px; justify-content: center; }
+.row .box { flex: 1; max-width: 380px; }
+
+.side-arrows { display: flex; justify-content: center; gap: 80px; padding: 8px 0; }
+.side-arrow { display: flex; flex-direction: column; align-items: center; }
+
+.legend { margin-top: 30px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+.flow-section { margin-top: 50px; padding-top: 30px; border-top: 1px solid #eee; }
+.flow-section h2 { font-size: 18px; font-weight: 500; color: #1a1a2e; margin-bottom: 20px; text-align: center; }
+.flow-steps { display: flex; align-items: flex-start; justify-content: center; gap: 0; flex-wrap: wrap; }
+.flow-step { text-align: center; width: 140px; }
+.flow-step .num { width: 32px; height: 32px; border-radius: 50%; background: #e6f1fb; color: #185fa5; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
+.flow-step .step-title { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; }
+.flow-step .step-desc { font-size: 11px; color: #888; line-height: 1.4; }
+.flow-arrow-h { display: flex; align-items: center; padding-top: 10px; }
+.flow-arrow-h .line { width: 30px; height: 2px; background: #ccc; }
+.flow-arrow-h .head { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid #ccc; }
+
+.vlan-table { margin: 30px auto 0; border-collapse: collapse; font-size: 13px; }
+.vlan-table th { background: #1a1a2e; color: #fff; padding: 10px 20px; font-weight: 500; }
+.vlan-table td { padding: 8px 20px; border-bottom: 1px solid #eee; color: #333; }
+.vlan-table tr:nth-child(even) td { background: #fafafa; }
+.vlan-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.v10 { background: #e6f1fb; color: #185fa5; }
+.v20 { background: #e1f5ee; color: #0f6e56; }
+.v30 { background: #faeeda; color: #854f0b; }
+.v40 { background: #eeedfe; color: #534ab7; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>NAC (Network Access Control) — Sistem Mimarisi</h1>
+
+    <!-- NAS -->
+    <div style="max-width: 340px; margin: 0 auto;">
+        <div class="box nas">
+            <div class="title">NAS / Test Client</div>
+            <div class="sub">radtest, radclient, switch, AP</div>
+        </div>
+    </div>
+
+    <!-- Ok: RADIUS -->
+    <div class="arrow-container">
+        <div class="arrow">
+            <div class="arrow-line"></div>
+            <div class="arrow-label">RADIUS (UDP 1812 / 1813)</div>
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+        </div>
+    </div>
+
+    <!-- FreeRADIUS -->
+    <div style="max-width: 480px; margin: 0 auto;">
+        <div class="box radius">
+            <div class="title">FreeRADIUS 3.2</div>
+            <div class="sub">rlm_rest modülü → HTTP ile API'ye sorar</div>
+            <div class="ports">Auth: 1812/UDP &nbsp;|&nbsp; Acct: 1813/UDP</div>
+        </div>
+    </div>
+
+    <!-- Ok: HTTP -->
+    <div class="arrow-container">
+        <div class="arrow">
+            <div class="arrow-line"></div>
+            <div class="arrow-label">HTTP POST (form-encoded) → /auth, /authorize, /accounting</div>
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+        </div>
+    </div>
+
+    <!-- FastAPI -->
+    <div style="max-width: 560px; margin: 0 auto;">
+        <div class="box api">
+            <div class="title">FastAPI Policy Engine</div>
+            <div class="sub">Python 3.13 — Karar merkezi (AAA)</div>
+            <div class="ports">Port: 8000/TCP &nbsp;|&nbsp; bcrypt + rate-limiting</div>
+        </div>
+    </div>
+
+    <!-- Oklar: DB ve Redis -->
+    <div class="side-arrows">
+        <div class="side-arrow">
+            <div class="arrow-line"></div>
+            <div class="arrow-label">asyncpg</div>
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+        </div>
+        <div class="side-arrow">
+            <div class="arrow-line"></div>
+            <div class="arrow-label">aioredis</div>
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+        </div>
+    </div>
+
+    <!-- PostgreSQL ve Redis -->
+    <div class="row">
+        <div class="box db">
+            <div class="title">PostgreSQL 18</div>
+            <div class="sub">Kalıcı veri: kullanıcılar, gruplar, accounting</div>
+            <div class="ports">7 tablo &nbsp;|&nbsp; Port: 5432/TCP</div>
+        </div>
+        <div class="box cache">
+            <div class="title">Redis 8</div>
+            <div class="sub">Geçici veri: session cache, rate-limit</div>
+            <div class="ports">TTL ile otomatik temizlik &nbsp;|&nbsp; Port: 6379/TCP</div>
+        </div>
+    </div>
+
+    <!-- Network bar -->
+    <div class="network-bar">
+        Docker Network: nac-network (bridge, 172.20.0.0/16) — Tüm servisler bu ağda haberleşiyor
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#d3d1c7"></div> NAS / Client</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#85b7eb"></div> RADIUS Sunucusu</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#5dcaa5"></div> Policy Engine</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#afa9ec"></div> Veritabanı</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f0997b"></div> Cache</div>
+    </div>
+
+    <!-- PAP Auth Flow -->
+    <div class="flow-section">
+        <h2>PAP Authentication Akışı</h2>
+        <div class="flow-steps">
+            <div class="flow-step">
+                <div class="num">1</div>
+                <div class="step-title">Access-Request</div>
+                <div class="step-desc">NAS, kullanıcı adı ve şifreyi FreeRADIUS'a gönderir</div>
+            </div>
+            <div class="flow-arrow-h"><div class="line"></div><div class="head"></div></div>
+            <div class="flow-step">
+                <div class="num">2</div>
+                <div class="step-title">POST /authorize</div>
+                <div class="step-desc">API, kullanıcının grubunu ve VLAN bilgisini döner</div>
+            </div>
+            <div class="flow-arrow-h"><div class="line"></div><div class="head"></div></div>
+            <div class="flow-step">
+                <div class="num">3</div>
+                <div class="step-title">POST /auth</div>
+                <div class="step-desc">API, bcrypt ile şifre kontrolü yapar. 200 veya 401 döner</div>
+            </div>
+            <div class="flow-arrow-h"><div class="line"></div><div class="head"></div></div>
+            <div class="flow-step">
+                <div class="num">4</div>
+                <div class="step-title">Access-Accept</div>
+                <div class="step-desc">VLAN attribute'leri ile birlikte kullanıcıya erişim verilir</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VLAN Tablosu -->
+    <div class="flow-section">
+        <h2>VLAN Atamaları</h2>
+        <table class="vlan-table">
+            <tr><th>Grup</th><th>VLAN ID</th><th>Filter</th><th>Kullanıcılar / Cihazlar</th></tr>
+            <tr><td>admin</td><td><span class="vlan-badge v10">VLAN 10</span></td><td>admin-acl</td><td>admin1</td></tr>
+            <tr><td>employee</td><td><span class="vlan-badge v20">VLAN 20</span></td><td>employee-acl</td><td>employee1, employee2, IP Telefon</td></tr>
+            <tr><td>guest</td><td><span class="vlan-badge v30">VLAN 30</span></td><td>guest-acl</td><td>guest1, bilinmeyen MAC'ler</td></tr>
+            <tr><td>iot</td><td><span class="vlan-badge v40">VLAN 40</span></td><td>iot-acl</td><td>Yazıcı, Kamera, Konferans AP</td></tr>
+        </table>
+    </div>
+</div>
+</body>
+</html>

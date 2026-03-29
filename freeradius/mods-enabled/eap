@@ -1,0 +1,13 @@
+# Bu projede EAP (PEAP/TTLS) kullanmıyoruz.
+# Ancak FreeRADIUS varsayılan modül olarak yüklüyor,
+# hata vermemesi için minimal config gerekli.
+eap {
+    default_eap_type = md5
+    timer_expire = 60
+    ignore_unknown_eap_types = no
+    cisco_accounting_username_bug = no
+    max_sessions = 4096
+
+    md5 {
+    }
+}

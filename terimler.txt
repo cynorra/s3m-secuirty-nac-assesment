@@ -1,0 +1,240 @@
+════════════════════════════════════════════════════════════════
+  NAC PROJESİ — TERİMLER SÖZLÜĞÜ
+════════════════════════════════════════════════════════════════
+
+
+── AĞ ERİŞİM KONTROLÜ ─────────────────────────────────────────
+
+  NAC (Network Access Control)
+    Ağa kimin bağlanacağını kontrol eden sistem.
+    Kapıdaki güvenlik gibi düşün: kimlik sor, yetki ver, kaydet.
+
+  AAA (Authentication, Authorization, Accounting)
+    Üç temel işlem:
+      Authentication  → Kim bu?        (şifre kontrolü)
+      Authorization   → Ne yapabilir?  (VLAN atama)
+      Accounting      → Ne yaptı?      (oturum kaydı)
+
+  VLAN (Virtual LAN)
+    Ağı sanal olarak bölme. Her grup ayrı ağda gibi davranır.
+    Admin VLAN 10'da sunuculara erişir, misafir VLAN 30'da
+    sadece internete çıkar. Birbirlerini göremezler.
+
+  ACL (Access Control List)
+    Hangi trafiğe izin verilip hangisinin engelleneceğini belirler.
+    Switch üzerinde uygulanır. Örnek: admin-acl, guest-acl.
+
+
+── RADIUS PROTOKOlÜ ───────────────────────────────────────────
+
+  RADIUS (Remote Authentication Dial-In User Service)
+    UDP tabanlı AAA protokolü. 1991'den beri kullanılıyor.
+    Port 1812 = Authentication + Authorization
+    Port 1813 = Accounting
+
+  FreeRADIUS
+    RADIUS protokolünün açık kaynak sunucu yazılımı.
+    Dünyanın en yaygın RADIUS sunucusu. Bedava ve güçlü.
+
+  NAS (Network Access Server)
+    Switch, access point gibi ağ cihazı. Kullanıcıdan bilgiyi
+    alır, RADIUS sunucusuna sorar. Kapıdaki güvenlik görevlisi.
+
+  Secret
+    RADIUS client ile sunucu arasındaki paylaşılan gizli anahtar.
+    Her paket bu secret ile imzalanır. Projede: testing123.
+    Üretimde uzun ve rastgele olmalı.
+
+
+── RADIUS PAKETLERİ ────────────────────────────────────────────
+
+  Access-Request
+    NAS'ın RADIUS'a gönderdiği "bu kişi kim?" paketi.
+    İçinde User-Name ve User-Password var.
+
+  Access-Accept
+    RADIUS'un "tamam, geçebilir" yanıtı.
+    İçinde VLAN attribute'leri de olabilir.
+
+  Access-Reject
+    RADIUS'un "hayır, giremez" yanıtı.
+    İçinde Reply-Message (hata mesajı) olabilir.
+
+  Accounting-Start
+    Oturum başladı paketi. Kullanıcı bağlandığında gönderilir.
+
+  Interim-Update
+    Oturum devam ediyor paketi. Periyodik olarak gönderilir.
+    Oturum süresi ve veri miktarı güncellenir.
+
+  Accounting-Stop
+    Oturum bitti paketi. Kullanıcı çıktığında gönderilir.
+    Bitiş zamanı ve sebep kaydedilir.
+
+
+── DOĞRULAMA YÖNTEMLERİ ───────────────────────────────────────
+
+  PAP (Password Authentication Protocol)
+    En basit yöntem. Kullanıcı adı + şifre gönderilir.
+    Şifre RADIUS secret ile XOR'lanarak korunur.
+    Projede kullanıyoruz, bcrypt ile karşılaştırma yapıyoruz.
+
+  CHAP (Challenge Handshake Authentication Protocol)
+    Şifre ağda geçmez, yerine hash gönderilir.
+    Sunucu challenge gönderir, client hash hesaplar.
+    Projede kullanmıyoruz (bcrypt ile uyumsuz).
+
+  MAB (MAC Authentication Bypass)
+    Şifre giremeyecek cihazlar için: yazıcı, kamera, IP telefon.
+    MAC adresi User-Name olarak gönderilir.
+    Veritabanında varsa Accept, yoksa guest VLAN'a düşer.
+    Projede kullanıyoruz (bonus puan).
+
+  EAP (Extensible Authentication Protocol)
+    Sertifika veya tünel tabanlı doğrulama çerçevesi.
+    Alt türleri: EAP-TLS, EAP-TTLS, PEAP, EAP-MD5.
+    Projede kullanmıyoruz, modülünü sildik.
+
+  PEAP (Protected EAP)
+    Microsoft'un EAP versiyonu. TLS tüneli içinde MSCHAPv2
+    çalıştırır. Windows'ta yaygın. Projede kullanmıyoruz.
+
+  802.1X
+    IEEE standardı. Port bazlı ağ erişim kontrolü.
+    Switch portuna bağlanan her cihazdan kimlik ister.
+    Projede fiziksel switch yok, radtest ile simüle ediyoruz.
+
+
+── FREERADIUS KAVRAMLARI ───────────────────────────────────────
+
+  rlm_rest
+    FreeRADIUS'un REST modülü. HTTP ile dış API'ye soru sorar.
+    Projede: FreeRADIUS her şeyi bu modül ile FastAPI'ye soruyor.
+    body='post' ile form-encoded gönderir.
+
+  Virtual Server
+    FreeRADIUS'ta site tanımı. Her biri farklı portta farklı
+    politikayla çalışabilir. Projede sadece "default" var.
+
+  inner-tunnel
+    EAP'ın iç tüneli için virtual server. Port 18120'de dinler.
+    Projede EAP kullanmıyoruz, port çakışması yaratıyor.
+    Dockerfile'da siliyoruz.
+
+  Auth-Type
+    FreeRADIUS'un "doğrulamayı hangi modülle yapayım?" ayarı.
+    Projede: Auth-Type := rest (her zaman API'ye sor).
+    Alternatifler: PAP, CHAP, EAP (kullanmıyoruz).
+
+  := operatörü
+    FreeRADIUS'ta "kesin ata, varsa üzerine yaz" demek.
+    = operatörü: "sadece yoksa ata" demek.
+    == operatörü: "kontrol et, atama yapma" demek.
+
+
+── RADIUS ATTRIBUTE'LERİ ──────────────────────────────────────
+
+  Tunnel-Type
+    Switch'e "VLAN tagging kullan" der.
+    Değeri: VLAN
+
+  Tunnel-Medium-Type
+    "Ethernet üzerinden" der.
+    Değeri: IEEE-802
+
+  Tunnel-Private-Group-Id
+    VLAN numarasını belirtir.
+    Değeri: 10, 20, 30, 40 (gruba göre)
+
+  Filter-Id
+    Switch'te uygulanacak ACL kuralının adı.
+    Değeri: admin-acl, employee-acl, guest-acl, iot-acl
+
+  Bu 3 Tunnel attribute birlikte kullanılır.
+  Herhangi biri eksikse switch VLAN ataması yapamaz.
+  IEEE 802.1Q standardı bunu gerektirir.
+
+
+── GÜVENLİK ────────────────────────────────────────────────────
+
+  bcrypt
+    Kasıtlı yavaş şifre hashleme algoritması.
+    GPU ile brute-force saldırısını pratik olarak imkansız kılar.
+    Her hash farklı salt içerir. Sonuç: $2b$12$...
+
+  Salt
+    Hash'e eklenen rastgele değer. Aynı şifre her seferinde
+    farklı hash üretir. Rainbow table saldırılarını engeller.
+
+  Rate Limiting
+    Brute-force koruması. Belirli sayıda başarısız denemeden
+    sonra hesabı kilitle. Projede: 5 deneme → 10 dk kilit.
+    Redis'te INCR + EXPIRE + SETEX ile yapılıyor.
+
+
+── VERİTABANI VE CACHE ────────────────────────────────────────
+
+  Connection Pool
+    Veritabanına önceden açılmış bağlantı havuzu.
+    Her istek için yeni bağlantı açmak yerine havuzdan alınır.
+    Projede: asyncpg, min=2 max=10 bağlantı.
+
+  TTL (Time To Live)
+    Redis'te verinin otomatik silineceği süre.
+    Projede: session cache 24 saat, lock 10 dakika.
+
+  asyncpg
+    PostgreSQL için async Python driver. C tabanlı, çok hızlı.
+    SQLAlchemy gibi ORM değil, direkt SQL konuşur.
+
+  aioredis
+    Redis için async Python client.
+    decode_responses=True ile bytes yerine string döner.
+
+
+── DOCKER ──────────────────────────────────────────────────────
+
+  Docker Compose
+    Birden fazla container'ı tek YAML dosyasıyla yönetme aracı.
+    docker-compose up -d ile hepsi ayağa kalkar.
+
+  Healthcheck
+    Container'ın sağlıklı çalışıp çalışmadığını kontrol eden komut.
+    Projede: pg_isready, redis-cli ping, curl /health, radclient.
+
+  Bridge Network
+    Docker'ın varsayılan ağ tipi. Container'lar birbirini
+    isimle bulur (DNS). Projede: nac-network (172.20.0.0/16).
+
+  Named Volume
+    Docker'ın yönettiği kalıcı depolama. Container silinse bile
+    veri kalır. docker-compose down -v ile silinir.
+
+  depends_on + service_healthy
+    Servislerin doğru sırada başlamasını sağlar.
+    Postgres → Redis → API → FreeRADIUS.
+
+
+── FASTAPI / PYTHON ────────────────────────────────────────────
+
+  ASGI (Async Server Gateway Interface)
+    FastAPI'nin çalışma standardı. Asenkron istek işleme.
+
+  uvicorn
+    ASGI web sunucusu. FastAPI uygulamasını çalıştırır.
+    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  Pydantic
+    Veri doğrulama kütüphanesi. Gelen JSON'ı otomatik kontrol
+    eder, yanlış tip gelirse 422 hatası döner.
+
+  AsyncMock
+    Unit testlerde gerçek DB/Redis yerine kullanılan sahte nesne.
+    return_value ile "bu çağrılınca şunu dön" diyoruz.
+
+  patch
+    Gerçek fonksiyonu geçici olarak mock ile değiştirir.
+    Test bitince orijinal fonksiyon geri gelir.
+
+
+════════════════════════════════════════════════════════════════

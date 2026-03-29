@@ -1,0 +1,44 @@
+# 1. PAP — admin1 (Accept, VLAN 10 bekleniyor)
+docker exec nac-freeradius radtest admin1 "Admin.Pass.2026!" localhost 0 testing123
+
+# 2. PAP — employee1 (Accept, VLAN 20 bekleniyor)
+docker exec nac-freeradius radtest employee1 "Emp.Pass.2026!" localhost 0 testing123
+
+# 3. PAP — hatalı şifre (Reject bekleniyor)
+docker exec nac-freeradius radtest admin1 "yanlis" localhost 0 testing123
+
+# 4. MAB — kayıtlı cihaz (Accept bekleniyor)
+docker exec nac-freeradius bash -c "echo 'User-Name=AA:BB:CC:DD:EE:01,User-Password=AA:BB:CC:DD:EE:01,Calling-Station-Id=AA:BB:CC:DD:EE:01' | radclient localhost auth testing123"
+
+# 5. MAB — bilinmeyen cihaz (Accept, guest VLAN bekleniyor)
+docker exec nac-freeradius bash -c "echo 'User-Name=FF:FF:FF:FF:FF:FF,User-Password=FF:FF:FF:FF:FF:FF,Calling-Station-Id=FF:FF:FF:FF:FF:FF' | radclient localhost auth testing123"
+
+# 6. Kullanıcı listesi
+docker exec nac-freeradius curl -s http://nac-api:8000/users
+
+# 7. Cihaz listesi
+docker exec nac-freeradius curl -s http://nac-api:8000/devices
+
+# 8. Aktif oturumlar (boş olmalı)
+docker exec nac-freeradius curl -s http://nac-api:8000/sessions/active
+
+# 9. Accounting Start
+docker exec nac-freeradius bash -c 'curl -s -X POST http://nac-api:8000/accounting -H "Content-Type: application/json" -d "{\"User-Name\":\"admin1\",\"Acct-Status-Type\":\"Start\",\"Acct-Session-Id\":\"sess-001\",\"Acct-Unique-Session-Id\":\"uniq001\",\"NAS-IP-Address\":\"172.20.0.1\",\"Framed-IP-Address\":\"10.0.10.5\"}"'
+
+# 10. Aktif oturumlar (1 olmalı)
+docker exec nac-freeradius curl -s http://nac-api:8000/sessions/active
+
+# 11. Accounting Stop
+docker exec nac-freeradius bash -c 'curl -s -X POST http://nac-api:8000/accounting -H "Content-Type: application/json" -d "{\"User-Name\":\"admin1\",\"Acct-Status-Type\":\"Stop\",\"Acct-Session-Id\":\"sess-001\",\"Acct-Session-Time\":\"300\",\"Acct-Terminate-Cause\":\"User-Request\"}"'
+
+# 12. Accounting geçmişi
+docker exec nac-freeradius curl -s http://nac-api:8000/accounting/history
+
+# 13. Dashboard verisi
+docker exec nac-freeradius curl -s http://nac-api:8000/dashboard/data
+
+# 14. Unit testler (26 passed bekleniyor)
+docker exec nac-api pytest test_main.py -v
+
+# 15. Dashboard (tarayıcıdan aç)
+# http://localhost:8000/dashboard

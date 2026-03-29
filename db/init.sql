@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS radgroupreply (
     id SERIAL PRIMARY KEY,
     groupname VARCHAR(64) NOT NULL,
     attribute VARCHAR(64) NOT NULL,
-    op CHAR(2) NOT NULL DEFAULT ':='
+    op CHAR(2) NOT NULL DEFAULT ':=',
     value VARCHAR(253) NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_radgroupreply_groupname ON radgroupreply(groupname);

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>VLAN Atama Akışı</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; padding: 40px 20px; }
+.container { max-width: 960px; margin: 0 auto; }
+h1 { text-align: center; font-size: 22px; font-weight: 500; color: #1a1a2e; margin-bottom: 10px; }
+h2 { font-size: 18px; font-weight: 500; color: #1a1a2e; margin: 40px 0 16px; padding-top: 20px; border-top: 1px solid #eee; }
+h2:first-of-type { border-top: none; margin-top: 30px; }
+.subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 40px; }
+
+/* tablo stili */
+.db-table { border-collapse: collapse; width: 100%; margin-bottom: 16px; font-size: 13px; }
+.db-table th { background: #1a1a2e; color: #fff; padding: 10px 16px; font-weight: 500; text-align: left; }
+.db-table td { padding: 9px 16px; border-bottom: 1px solid #eee; color: #333; }
+.db-table tr:nth-child(even) td { background: #fafafa; }
+.table-name { font-size: 14px; font-weight: 600; color: #1a1a2e; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.table-icon { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
+
+/* badge'ler */
+.vlan-badge { display: inline-block; padding: 2px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.v10 { background: #e6f1fb; color: #185fa5; }
+.v20 { background: #e1f5ee; color: #0f6e56; }
+.v30 { background: #faeeda; color: #854f0b; }
+.v40 { background: #eeedfe; color: #534ab7; }
+.group-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.g-admin { background: #e6f1fb; color: #185fa5; }
+.g-emp { background: #e1f5ee; color: #0f6e56; }
+.g-guest { background: #faeeda; color: #854f0b; }
+.g-iot { background: #eeedfe; color: #534ab7; }
+
+/* akış diyagramı */
+.flow { display: flex; align-items: stretch; justify-content: center; gap: 0; margin: 30px 0; flex-wrap: wrap; }
+.flow-box { background: #fff; border: 1.5px solid #ddd; border-radius: 12px; padding: 16px 20px; text-align: center; width: 200px; position: relative; }
+.flow-box .ftitle { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-bottom: 6px; }
+.flow-box .fdesc { font-size: 11px; color: #666; line-height: 1.5; }
+.flow-box .ftable { font-size: 11px; color: #888; margin-top: 4px; }
+.flow-box.blue { border-color: #85b7eb; background: #f0f7fe; }
+.flow-box.green { border-color: #5dcaa5; background: #f0faf5; }
+.flow-box.purple { border-color: #afa9ec; background: #f5f4fe; }
+.flow-box.amber { border-color: #efcf77; background: #fdf8ed; }
+.flow-arrow { display: flex; align-items: center; padding: 0 4px; }
+.flow-arrow .line { width: 28px; height: 2px; background: #bbb; }
+.flow-arrow .head { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid #bbb; }
+.flow-arrow .label { font-size: 10px; color: #999; position: absolute; top: -14px; white-space: nowrap; }
+
+/* senaryo kartları */
+.scenarios { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+.scenario { border: 1px solid #e8e8e8; border-radius: 12px; padding: 16px 20px; background: #fff; }
+.scenario .stitle { font-size: 14px; font-weight: 600; color: #1a1a2e; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.scenario .stag { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 500; }
+.scenario .accept { background: #e1f5ee; color: #0f6e56; }
+.scenario .reject { background: #fcebeb; color: #a32d2d; }
+.step { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; font-size: 12px; color: #555; line-height: 1.5; }
+.step-num { width: 20px; height: 20px; border-radius: 50%; background: #f0f0f0; color: #666; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-result { margin-top: 8px; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+.result-accept { background: #e1f5ee; color: #0f6e56; }
+.result-reject { background: #fcebeb; color: #a32d2d; }
+
+.code-block { background: #f8f8f8; border: 1px solid #e8e8e8; border-radius: 8px; padding: 14px 18px; font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; color: #333; line-height: 1.6; margin: 12px 0; overflow-x: auto; white-space: pre; }
+.comment { color: #888; }
+.highlight { background: #fff3cd; padding: 1px 4px; border-radius: 3px; }
+
+.key-point { background: #f0f7fe; border-left: 3px solid #378add; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 13px; color: #333; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>VLAN Atama Akışı — Nasıl Çalışıyor?</h1>
+    <p class="subtitle">Kullanıcı/cihaz ağa bağlandığında hangi VLAN'a atanacağını belirleyen süreç</p>
+
+    <!-- AKIŞ DİYAGRAMI -->
+    <h2>1. Genel Akış</h2>
+    <div class="flow">
+        <div class="flow-box blue">
+            <div class="ftitle">Kullanıcı/Cihaz geldi</div>
+            <div class="fdesc">User-Name:<br>admin1 veya AA:BB:CC:DD:EE:01</div>
+        </div>
+        <div class="flow-arrow" style="position:relative">
+            <div class="line"></div><div class="head"></div>
+        </div>
+        <div class="flow-box green">
+            <div class="ftitle">MAC mi kontrol et</div>
+            <div class="fdesc">is_mab_request()<br>12 hex karakter?</div>
+            <div class="ftable">Evet → mac_devices<br>Hayır → radusergroup</div>
+        </div>
+        <div class="flow-arrow"><div class="line"></div><div class="head"></div></div>
+        <div class="flow-box purple">
+            <div class="ftitle">Grubu bul</div>
+            <div class="fdesc">admin, employee,<br>guest veya iot</div>
+        </div>
+        <div class="flow-arrow"><div class="line"></div><div class="head"></div></div>
+        <div class="flow-box amber">
+            <div class="ftitle">VLAN attribute'leri</div>
+            <div class="fdesc">radgroupreply<br>tablosundan çek</div>
+            <div class="ftable">Tunnel-Private-Group-Id</div>
+        </div>
+    </div>
+
+    <div class="key-point">
+        <strong>Kritik nokta:</strong> VLAN ataması <strong>authorize</strong> aşamasında yapılır, authenticate'den önce. FreeRADIUS önce /authorize'a sorar (VLAN bilgisini alır), sonra /auth'a sorar (şifre kontrolü). Accept gelirse VLAN attribute'leri yanıta eklenir.
+    </div>
+
+    <!-- VERİTABANI TABLOLARI -->
+    <h2>2. Veritabanı Tabloları (Zincir)</h2>
+
+    <p style="font-size:13px; color:#666; margin-bottom:20px;">3 tablo zincirleme bağlı: kullanıcı → grup → VLAN. MAC cihazlar için ayrı tablo var.</p>
+
+    <!-- radcheck -->
+    <div class="table-name">
+        <div class="table-icon" style="background:#378add">1</div>
+        radcheck — Kullanıcı kimlik bilgileri
+    </div>
+    <table class="db-table">
+        <tr><th>username</th><th>attribute</th><th>op</th><th>value</th></tr>
+        <tr><td>admin1</td><td>Cleartext-Password</td><td>:=</td><td>$2b$12$Tq4xqs/... (bcrypt hash)</td></tr>
+        <tr><td>employee1</td><td>Cleartext-Password</td><td>:=</td><td>$2b$12$bCY9pu... (bcrypt hash)</td></tr>
+        <tr><td>employee2</td><td>Cleartext-Password</td><td>:=</td><td>$2b$12$IcLnK9... (bcrypt hash)</td></tr>
+        <tr><td>guest1</td><td>Cleartext-Password</td><td>:=</td><td>$2b$12$/W7o5R... (bcrypt hash)</td></tr>
+    </table>
+
+    <!-- radusergroup -->
+    <div class="table-name" style="margin-top:24px">
+        <div class="table-icon" style="background:#1d9e75">2</div>
+        radusergroup — Kullanıcı → Grup eşleştirmesi
+    </div>
+    <table class="db-table">
+        <tr><th>username</th><th>groupname</th><th>priority</th></tr>
+        <tr><td>admin1</td><td><span class="group-badge g-admin">admin</span></td><td>1</td></tr>
+        <tr><td>employee1</td><td><span class="group-badge g-emp">employee</span></td><td>1</td></tr>
+        <tr><td>employee2</td><td><span class="group-badge g-emp">employee</span></td><td>1</td></tr>
+        <tr><td>guest1</td><td><span class="group-badge g-guest">guest</span></td><td>1</td></tr>
+    </table>
+
+    <!-- radgroupreply -->
+    <div class="table-name" style="margin-top:24px">
+        <div class="table-icon" style="background:#534ab7">3</div>
+        radgroupreply — Grup → VLAN / Politika attribute'leri
+    </div>
+    <table class="db-table">
+        <tr><th>groupname</th><th>attribute</th><th>value</th><th>Açıklama</th></tr>
+        <tr><td rowspan="4"><span class="group-badge g-admin">admin</span></td><td>Tunnel-Type</td><td>VLAN</td><td>VLAN tagging kullan</td></tr>
+        <tr><td>Tunnel-Medium-Type</td><td>IEEE-802</td><td>Ethernet üzerinden</td></tr>
+        <tr><td>Tunnel-Private-Group-Id</td><td><span class="vlan-badge v10">10</span></td><td>VLAN numarası</td></tr>
+        <tr><td>Filter-Id</td><td>admin-acl</td><td>ACL kuralı</td></tr>
+        <tr><td rowspan="4"><span class="group-badge g-emp">employee</span></td><td>Tunnel-Type</td><td>VLAN</td><td>VLAN tagging kullan</td></tr>
+        <tr><td>Tunnel-Medium-Type</td><td>IEEE-802</td><td>Ethernet üzerinden</td></tr>
+        <tr><td>Tunnel-Private-Group-Id</td><td><span class="vlan-badge v20">20</span></td><td>VLAN numarası</td></tr>
+        <tr><td>Filter-Id</td><td>employee-acl</td><td>ACL kuralı</td></tr>
+        <tr><td rowspan="5"><span class="group-badge g-guest">guest</span></td><td>Tunnel-Type</td><td>VLAN</td><td>VLAN tagging kullan</td></tr>
+        <tr><td>Tunnel-Medium-Type</td><td>IEEE-802</td><td>Ethernet üzerinden</td></tr>
+        <tr><td>Tunnel-Private-Group-Id</td><td><span class="vlan-badge v30">30</span></td><td>VLAN numarası</td></tr>
+        <tr><td>Filter-Id</td><td>guest-acl</td><td>ACL kuralı</td></tr>
+        <tr><td>Session-Timeout</td><td>3600</td><td>1 saat sonra düşür</td></tr>
+        <tr><td rowspan="4"><span class="group-badge g-iot">iot</span></td><td>Tunnel-Type</td><td>VLAN</td><td>VLAN tagging kullan</td></tr>
+        <tr><td>Tunnel-Medium-Type</td><td>IEEE-802</td><td>Ethernet üzerinden</td></tr>
+        <tr><td>Tunnel-Private-Group-Id</td><td><span class="vlan-badge v40">40</span></td><td>VLAN numarası</td></tr>
+        <tr><td>Filter-Id</td><td>iot-acl</td><td>ACL kuralı</td></tr>
+    </table>
+
+    <!-- mac_devices -->
+    <div class="table-name" style="margin-top:24px">
+        <div class="table-icon" style="background:#d85a30">4</div>
+        mac_devices — MAC adresi → Grup eşleştirmesi (MAB için)
+    </div>
+    <table class="db-table">
+        <tr><th>mac_address</th><th>device_name</th><th>device_type</th><th>groupname</th></tr>
+        <tr><td>AA:BB:CC:DD:EE:01</td><td>Kat-1 Yazıcı</td><td>printer</td><td><span class="group-badge g-iot">iot</span> → <span class="vlan-badge v40">VLAN 40</span></td></tr>
+        <tr><td>AA:BB:CC:DD:EE:02</td><td>Lobby IP Telefon</td><td>ip_phone</td><td><span class="group-badge g-emp">employee</span> → <span class="vlan-badge v20">VLAN 20</span></td></tr>
+        <tr><td>AA:BB:CC:DD:EE:03</td><td>Güvenlik Kamerası</td><td>camera</td><td><span class="group-badge g-iot">iot</span> → <span class="vlan-badge v40">VLAN 40</span></td></tr>
+        <tr><td>AA:BB:CC:DD:EE:04</td><td>Konferans Odası AP</td><td>access_point</td><td><span class="group-badge g-admin">admin</span> → <span class="vlan-badge v10">VLAN 10</span></td></tr>
+        <tr><td style="color:#999">Bilinmeyen MAC</td><td style="color:#999">—</td><td style="color:#999">—</td><td><span class="group-badge g-guest">guest</span> → <span class="vlan-badge v30">VLAN 30</span></td></tr>
+    </table>
+
+    <!-- SENARYOLAR -->
+    <h2>3. Gerçek Senaryolar</h2>
+    <div class="scenarios">
+        <div class="scenario">
+            <div class="stitle">
+                PAP: admin1 giriş yapıyor
+                <span class="stag accept">ACCEPT</span>
+            </div>
+            <div class="step"><div class="step-num">1</div> User-Name = "admin1" → MAC değil, normal kullanıcı</div>
+            <div class="step"><div class="step-num">2</div> radusergroup'ta ara → groupname = "admin"</div>
+            <div class="step"><div class="step-num">3</div> radgroupreply'dan admin'in attribute'lerini çek</div>
+            <div class="step"><div class="step-num">4</div> Tunnel-Private-Group-Id = 10, Filter-Id = admin-acl</div>
+            <div class="step-result result-accept">Sonuç: Access-Accept + VLAN 10</div>
+        </div>
+
+        <div class="scenario">
+            <div class="stitle">
+                MAB: Yazıcı bağlanıyor
+                <span class="stag accept">ACCEPT</span>
+            </div>
+            <div class="step"><div class="step-num">1</div> User-Name = "AA:BB:CC:DD:EE:01" → 12 hex, MAC!</div>
+            <div class="step"><div class="step-num">2</div> mac_devices'ta ara → groupname = "iot"</div>
+            <div class="step"><div class="step-num">3</div> radgroupreply'dan iot'un attribute'lerini çek</div>
+            <div class="step"><div class="step-num">4</div> Tunnel-Private-Group-Id = 40, Filter-Id = iot-acl</div>
+            <div class="step-result result-accept">Sonuç: Access-Accept + VLAN 40</div>
+        </div>
+
+        <div class="scenario">
+            <div class="stitle">
+                MAB: Bilinmeyen cihaz
+                <span class="stag accept">ACCEPT (guest)</span>
+            </div>
+            <div class="step"><div class="step-num">1</div> User-Name = "FF:FF:FF:FF:FF:FF" → 12 hex, MAC!</div>
+            <div class="step"><div class="step-num">2</div> mac_devices'ta ara → bulunamadı!</div>
+            <div class="step"><div class="step-num">3</div> Varsayılan grup: "guest"</div>
+            <div class="step"><div class="step-num">4</div> Tunnel-Private-Group-Id = 30, Session-Timeout = 3600</div>
+            <div class="step-result result-accept">Sonuç: Access-Accept + VLAN 30 (1 saat limit)</div>
+        </div>
+
+        <div class="scenario">
+            <div class="stitle">
+                PAP: Yanlış şifre
+                <span class="stag reject">REJECT</span>
+            </div>
+            <div class="step"><div class="step-num">1</div> User-Name = "admin1" → authorize'da VLAN 10 atandı</div>
+            <div class="step"><div class="step-num">2</div> /auth'ta şifre kontrolü → bcrypt eşleşmedi!</div>
+            <div class="step"><div class="step-num">3</div> API 401 döndü → rlm_rest "reject"</div>
+            <div class="step"><div class="step-num">4</div> Redis'te fail sayacı artırıldı</div>
+            <div class="step-result result-reject">Sonuç: Access-Reject + "Hatalı şifre."</div>
+        </div>
+    </div>
+
+    <!-- DİNAMİK POLİTİKA -->
+    <h2>4. Dinamik Politika Yönetimi</h2>
+    <div class="key-point">
+        Yeni grup eklemek için <strong>sadece veritabanına INSERT</strong> yeterli. Kod değişikliği gerekmez. API, authorize isteğinde grubu ve attribute'leri DB'den çekiyor.
+    </div>
+    <div class="code-block"><span class="comment">-- yeni "contractor" grubu oluştur → VLAN 50</span>
+INSERT INTO radgroupreply (groupname, attribute, op, value) VALUES
+    ('contractor', 'Tunnel-Type', ':=', 'VLAN'),
+    ('contractor', 'Tunnel-Medium-Type', ':=', 'IEEE-802'),
+    ('contractor', 'Tunnel-Private-Group-Id', ':=', '<span class="highlight">50</span>'),
+    ('contractor', 'Filter-Id', ':=', 'contractor-acl');
+
+<span class="comment">-- kullanıcıyı bu gruba ata</span>
+INSERT INTO radusergroup (username, groupname, priority) VALUES
+    ('contractor1', 'contractor', 1);
+
+<span class="comment">-- yeni kullanıcı oluştur (şifre bcrypt ile hashlenmiş)</span>
+INSERT INTO radcheck (username, attribute, op, value) VALUES
+    ('contractor1', 'Cleartext-Password', ':=', '$2b$12$...');</div>
+
+    <div class="key-point" style="border-left-color: #1d9e75;">
+        <strong>3 Tunnel attribute neden birlikte?</strong><br>
+        • <code>Tunnel-Type = VLAN</code> → Switch'e "VLAN tagging kullan" der<br>
+        • <code>Tunnel-Medium-Type = IEEE-802</code> → "Ethernet üzerinden" der<br>
+        • <code>Tunnel-Private-Group-Id = 10</code> → "VLAN numarası bu" der<br>
+        Üçü birlikte olmadan switch VLAN ataması yapamaz. IEEE 802.1Q standardı bunu gerektirir.
+    </div>
+</div>
+</body>
+</html>
